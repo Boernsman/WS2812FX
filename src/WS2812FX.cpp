@@ -174,7 +174,7 @@ void WS2812FX::setSpeed(uint16_t s) {
 }
 
 void WS2812FX::setSpeed(uint8_t seg, uint16_t s) {
-  resetSegmentRuntime(seg);
+//  resetSegmentRuntime(seg);
   _segments[seg].speed = constrain(s, SPEED_MIN, SPEED_MAX);
 }
 
@@ -201,12 +201,12 @@ void WS2812FX::setColor(uint32_t c) {
 }
 
 void WS2812FX::setColor(uint8_t seg, uint32_t c) {
-  resetSegmentRuntime(seg);
+//  resetSegmentRuntime(seg);
   _segments[seg].colors[0] = c;
 }
 
 void WS2812FX::setColors(uint8_t seg, uint32_t* c) {
-  resetSegmentRuntime(seg);
+//  resetSegmentRuntime(seg);
   for(uint8_t i=0; i<NUM_COLORS; i++) {
     _segments[seg].colors[i] = c[i];
   }
@@ -777,7 +777,7 @@ uint16_t WS2812FX::scan(uint32_t color1, uint32_t color2, bool dual) {
 
   SEGMENT_RUNTIME.counter_mode_step += dir;
   if(SEGMENT_RUNTIME.counter_mode_step == 0) SEGMENT_RUNTIME.aux_param = 0;
-  if(SEGMENT_RUNTIME.counter_mode_step >= (SEGMENT_LENGTH - size)) SEGMENT_RUNTIME.aux_param = 1;
+  if(SEGMENT_RUNTIME.counter_mode_step >= (uint16_t)(SEGMENT_LENGTH - size)) SEGMENT_RUNTIME.aux_param = 1;
 
   return (SEGMENT.speed / (SEGMENT_LENGTH * 2));
 }
@@ -1034,23 +1034,23 @@ uint16_t WS2812FX::mode_sparkle(void) {
 
 
 /*
- * Lights all LEDs in the color. Flashes single white pixels randomly.
+ * Lights all LEDs in the color. Flashes white pixels randomly.
  * Inspired by www.tweaking4all.com/hardware/arduino/arduino-led-strip-effects/
  */
 uint16_t WS2812FX::mode_flash_sparkle(void) {
-  if(SEGMENT_RUNTIME.counter_mode_call == 0) {
-    for(uint16_t i=SEGMENT.start; i <= SEGMENT.stop; i++) {
-      setPixelColor(i, SEGMENT.colors[0]);
-    }
+  for(uint16_t i=SEGMENT.start; i <= SEGMENT.stop; i++) {
+    setPixelColor(i, SEGMENT.colors[0]);
   }
 
-  setPixelColor(SEGMENT.start + SEGMENT_RUNTIME.aux_param3, SEGMENT.colors[0]);
-
   if(random8(5) == 0) {
-    SEGMENT_RUNTIME.aux_param3 = random16(SEGMENT_LENGTH); // aux_param3 stores the random led index
-    setPixelColor(SEGMENT.start + SEGMENT_RUNTIME.aux_param3, WHITE);
+    uint8_t size = 1 << SIZE_OPTION;
+    uint16_t index = SEGMENT.start + random16(SEGMENT_LENGTH - size);
+    for(uint8_t j=0; j<size; j++) {
+      setPixelColor(index + j, WHITE);
+    }
     return 20;
-  } 
+  }
+
   return SEGMENT.speed;
 }
 
@@ -1384,7 +1384,7 @@ uint16_t WS2812FX::mode_larson_scanner(void) {
   else CLR_CYCLE;
 
   SEGMENT_RUNTIME.counter_mode_step++;
-  if(SEGMENT_RUNTIME.counter_mode_step >= ((SEGMENT_LENGTH * 2) - 2)) {
+  if(SEGMENT_RUNTIME.counter_mode_step >= (uint16_t)((SEGMENT_LENGTH * 2) - 2)) {
     SEGMENT_RUNTIME.counter_mode_step = 0;
   }
 
@@ -1452,7 +1452,11 @@ uint16_t WS2812FX::fireworks(uint32_t color) {
  * Firework sparks.
  */
 uint16_t WS2812FX::mode_fireworks(void) {
-  return fireworks(SEGMENT.colors[0]);
+  uint32_t color = BLACK;
+  do { // randomly choose a non-BLACK color from the colors array
+    color = SEGMENT.colors[random8(NUM_COLORS)];
+  } while (color == BLACK);
+  return fireworks(color);
 }
 
 /*
@@ -1605,7 +1609,7 @@ uint8_t WS2812FX::setCustomMode(const __FlashStringHelper* name, uint16_t (*p)()
 }
 
 uint8_t WS2812FX::setCustomMode(uint8_t index, const __FlashStringHelper* name, uint16_t (*p)()) {
-  if((FX_MODE_CUSTOM_0 + index) < MODE_COUNT) {
+  if((uint8_t)(FX_MODE_CUSTOM_0 + index) < MODE_COUNT) {
     _names[FX_MODE_CUSTOM_0 + index] = name; // store the custom mode name
     customModes[index] = p; // store the custom mode
 
